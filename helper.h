@@ -17,11 +17,11 @@
 # include <errno.h>
 # include <string.h>
 
-# define SHM_KEY 0x47859374 // Change this number as needed
+# define SHM_KEY 0x11235813 // Change this number as needed
 # define SHM_W 0200
 # define SHM_R 0400
 # define SHM_MODE (SHM_R | SHM_W)
-# define SHM_SIZE 1000 // Change this number as needed
+# define SHM_SIZE 4012 // Change this number as needed
 # define SEM_KEY 0x019237 // Change this number as needed
 
 union semun {
