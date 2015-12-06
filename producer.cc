@@ -45,28 +45,38 @@ int main (int argc, char *argv[])
   jobQ->end = 0;
 
   //seed the random number generator to time for a bit of variation.
-  srand(time(NULL));
+
+  long start_time = time(NULL);
+
+  srand(start_time);
 
   for(int k = 0; k < jobs; k++)
     {
       sleep(rand()%3 + 2); //Preparing next job takes 2-4 seconds.
 
       JOBTYPE newJob;
-      //Job id is one plaus the location they occupy in queue.
-      newJob.id = (k+1); 
+      //Job id is one plus the location they occupy in queue.
+      newJob.id = (end+1); 
       newJob.duration = rand()%6 + 2;
-      jobQ->job[k];
+      jobQ->job[end] = newJob;
 
-      printf("New Job! It has ID %d. \n", newJob.id);
+      size++;
+      end = (end + 1) % MAX_QUEUE_SIZE;
+
+      if(size == MAX_QUEUE_SIZE)
+      {
+        // SEM DOWN ON PRODUCER ADDING JOBS
+      }
+
+      printf("Producer(%d) time  %li: Job id %d duration %d \n", prodID, 
+        (time(NULL) - start_time), newJob.id, newJob.duration);
     }
+
+    printf("Producer(%d) time %li: No more jobs to generate \n", prodID,
+        (time(NULL) - start_time));
 
   shmdt((void*) jobQ);
   shmctl(shmid, IPC_RMID, NULL);
-
-  //jobQ->front = 0;
-
-  //printf("Size of queue pointer: %lu \n", sizeof(QUEUE*));
-  //printf("Size of queue: %lu \n", sizeof(QUEUE));
   
   return 0;
 }
