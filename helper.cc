@@ -67,7 +67,7 @@ int sem_timewait (int id, short unsigned int num, int tim)
   if (semtimedop(id, op, 1, &ts ) == -1 )
     if (errno == EAGAIN)
       return -1;
-  return 0;
+    return 0;
 }
 
 void sem_signal (int id, short unsigned int num)

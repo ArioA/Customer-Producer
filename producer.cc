@@ -28,8 +28,6 @@ int main (int argc, char *argv[])
       return 1;
     }
 
-  void* shared_mem(shmat(shmid, NULL, 0));
-
   if(shmat(shmid, NULL, 0) == (void*) (-1))
     {
       perror("Error with shmat in Producer.\n");
@@ -38,6 +36,11 @@ int main (int argc, char *argv[])
 
   QUEUE* jobQ;
   jobQ = static_cast<QUEUE*>(shmat(shmid, NULL, 0));
+
+  int semid;
+  int sem_key = SEM_KEY;
+  
+  semid = sem_attach(sem_key); //Attach the three semaphores.
 
   //seed the random number generator to time for a bit of variation.
 
@@ -51,31 +54,35 @@ int main (int argc, char *argv[])
 	{
 	  sleep(rand()%3 + 2); //Preparing next job takes 2-4 seconds.
 	}
+
+      sem_wait(semid, 2);//Down on empty count.
+
+      sem_wait(semid, 0); //Down on mutex.
+
       JOBTYPE newJob;
       //Job id is one plus the location they occupy in queue.
       newJob.id = (jobQ->end+1); 
       newJob.duration = rand()%6 + 2;
 
-      //DOWN EMPTY COUNT
-
-      //DOWN MUTEX
       jobQ->job[jobQ->end] = newJob;
-      //UP MUTEX
 
-      jobQ->size++;
-      jobQ->end = (jobQ->end + 1) % MAX_QUEUE_SIZE;
-
-      //UP FILL COUNT
+      jobQ->end = (jobQ->end + 1) % jobQ->size;
 
       printf("Producer(%d) time  %li: Job id %d duration %d \n", prodID, 
         (time(NULL) - start_time), newJob.id, newJob.duration);
+
+      sem_signal(semid, 0); //Up on mutex 
+
+      sem_signal(semid, 1); //Up on fill count.
     }
 
-    printf("Producer(%d) time %li: No more jobs to generate \n", prodID,
+    printf("Producer(%d) time  %li: No more jobs to generate \n", prodID,
         (time(NULL) - start_time));
+
+    sleep(50);
 
   shmdt((void*) jobQ);
   shmctl(shmid, IPC_RMID, NULL);
-  
+
   return 0;
 }

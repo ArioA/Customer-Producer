@@ -22,7 +22,7 @@
 # define SHM_R 0400
 # define SHM_MODE (SHM_R | SHM_W)
 # define SHM_SIZE 4012 // Change this number as needed
-# define SEM_KEY 0x019237 // Change this number as needed
+# define SEM_KEY 0x014916 // Change this number as needed
 # define MAX_QUEUE_SIZE 500
 
 union semun {
