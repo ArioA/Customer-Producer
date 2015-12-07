@@ -11,10 +11,30 @@ int main (int argc, char *argv[])
     }
 
   int consID = check_arg(argv[1]);
+  int key = SHM_KEY;
 
-  int shmid(shmget(SHM_KEY, SHM_SIZE, 0644 | IPC_CREAT));
+  int shmid(shmget(key, SHM_SIZE, 0644 | IPC_CREAT));
+
+  if(shmid == -1)
+    {
+      printf("Error with shmid in Consumer. \n");
+      return 1;
+    }
   
-  void* data(shmat(shmid, (void*) 0, 0));
+  void* shared_mem(shmat(shmid, NULL, 0));
+  
+  if(shmat(shmid, NULL, 0) == (void*) (-1))
+    {
+      perror("Error with shmat in Consumer.\n");
+      return 2;
+    }
+
+  QUEUE* jobQ;
+  jobQ = static_cast<QUEUE*>(shmat(shmid, NULL, 0));
+
+
+  shmdt((void*) jobQ);
+  shmctl(shmid, IPC_RMID, NULL);
 
   return 0;
 }

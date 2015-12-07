@@ -24,25 +24,20 @@ int main (int argc, char *argv[])
 
   if(shmid == -1)
     {
-      printf("Error with shmid \n");
-      return 0;
+      printf("Error with shmid in Producer.\n");
+      return 1;
     }
 
   void* shared_mem(shmat(shmid, NULL, 0));
 
   if(shmat(shmid, NULL, 0) == (void*) (-1))
     {
-      perror("Error with shmat.\n");
+      perror("Error with shmat in Producer.\n");
       return 2;
     }
 
   QUEUE* jobQ;
   jobQ = static_cast<QUEUE*>(shmat(shmid, NULL, 0));
-    
-  //Default settings.
-  jobQ->size = 0;
-  jobQ->front = 0;
-  jobQ->end = 0;
 
   //seed the random number generator to time for a bit of variation.
 
@@ -52,21 +47,25 @@ int main (int argc, char *argv[])
 
   for(int k = 0; k < jobs; k++)
     {
-      sleep(rand()%3 + 2); //Preparing next job takes 2-4 seconds.
-
+      if(k > 0)
+	{
+	  sleep(rand()%3 + 2); //Preparing next job takes 2-4 seconds.
+	}
       JOBTYPE newJob;
       //Job id is one plus the location they occupy in queue.
-      newJob.id = (end+1); 
+      newJob.id = (jobQ->end+1); 
       newJob.duration = rand()%6 + 2;
-      jobQ->job[end] = newJob;
 
-      size++;
-      end = (end + 1) % MAX_QUEUE_SIZE;
+      //DOWN EMPTY COUNT
 
-      if(size == MAX_QUEUE_SIZE)
-      {
-        // SEM DOWN ON PRODUCER ADDING JOBS
-      }
+      //DOWN MUTEX
+      jobQ->job[jobQ->end] = newJob;
+      //UP MUTEX
+
+      jobQ->size++;
+      jobQ->end = (jobQ->end + 1) % MAX_QUEUE_SIZE;
+
+      //UP FILL COUNT
 
       printf("Producer(%d) time  %li: Job id %d duration %d \n", prodID, 
         (time(NULL) - start_time), newJob.id, newJob.duration);
