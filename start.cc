@@ -56,8 +56,6 @@ int main (int argc, char **argv)
 
   if(sem_init(semid, 2, jobQ->size) == -1) //Empty condition semaphore.
     perror("Error with empty count semaphore. \n");
-
-  printf("\n");
   
   return 0;
 }

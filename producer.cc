@@ -55,6 +55,9 @@ int main (int argc, char *argv[])
 	  sleep(rand()%3 + 2); //Preparing next job takes 2-4 seconds.
 	}
 
+      if(k == 0 && jobQ->end == 0) //If first producer.
+	printf("\n");
+
       sem_wait(semid, 2);//Down on empty count.
 
       sem_wait(semid, 0); //Down on mutex.

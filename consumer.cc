@@ -14,10 +14,11 @@ int main (int argc, char *argv[])
   int key = SHM_KEY;
 
   int shmid(shmget(key, SHM_SIZE, 0644 | IPC_CREAT));
+  bool last_consumer = false;
 
   if(shmid == -1)
     {
-      printf("Error with shmid in Consumer. \n");
+      perror("Error with shmid in Consumer. \n");
       return 1;
     }
   
@@ -49,22 +50,34 @@ int main (int argc, char *argv[])
 	{
 	  printf("Consumer(%d) time  %li: No jobs left. \n", consID,
 		 (time(NULL) - start_time));
+	  
+	  if(last_consumer)
+	    {
+	      if(sem_close(semid) == -1) //Get rid of semaphores.
+		perror("Error closing semaphores in consumer.\n");
+	      
+	      shmdt((void*) jobQ);
+	      shmctl(shmid, IPC_RMID, NULL);
+	    }
 
 	  sleep(10);
-	  
-	  sem_close(semid); //Get rid of semaphores.
-	  
-	  shmdt((void*) jobQ);
-	  shmctl(shmid, IPC_RMID, NULL);
-	  
+
 	  return 0;
 	}
       else
 	{
+	  last_consumer = false;
+
 	  sem_wait(semid, 0); //Down on Mutex
 
 	  the_front = jobQ->front;
+
 	  jobQ->front = (jobQ->front + 1) % jobQ->size;
+
+	  if(jobQ->front == jobQ->end)
+	    {
+	      last_consumer = true;
+	    }
 
 	  sem_signal(semid, 0); //Up on Mutex
 
