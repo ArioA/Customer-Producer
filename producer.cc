@@ -48,6 +48,8 @@ int main (int argc, char *argv[])
 
   srand(start_time);
 
+  sleep(1); //Wait for newline from consumers.
+
   for(int k = 0; k < jobs; k++)
     {
       if(k > 0)
@@ -56,9 +58,6 @@ int main (int argc, char *argv[])
 	}
 
       sem_wait(semid, 2);//Down on empty count.
-
-      if(k == 0 && jobQ->end == 0) //If first producer.
-	printf("\n");
 
       sem_wait(semid, 0); //Down on mutex.
 

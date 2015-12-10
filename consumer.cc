@@ -45,6 +45,8 @@ int main (int argc, char *argv[])
     }
 
   long start_time = time(NULL); //Mark the start time of jobs processing.
+  int id;
+  int duration;
 
   sem_wait(semid, 0); //Down on Mutex
 
@@ -52,13 +54,14 @@ int main (int argc, char *argv[])
 
   sem_signal(semid, 0); //Up on Mutex
   
-  //int timewait; //Catches if 
+  if(jobQ->activeConsumers == 0)
+    {
+      printf("\n");
+    }
 
   while(true)
     {
-      //timewait = sem_timewait(semid, 1, 10); //Sem down for 10 seconds.
-
-      if(sem_timewait(semid, 1, 10) == -1) //If sem downed for 10 seconds...
+      if(sem_timewait(semid, 1, 10) == -1) //If blocked for 10 seconds...
 	{
 	  printf("Consumer(%d) time  %li: No jobs left. \n", consID,
 		 (time(NULL) - start_time));
@@ -90,21 +93,23 @@ int main (int argc, char *argv[])
 	{
 	  sem_wait(semid, 0); //Down on Mutex
 
+	  duration = jobQ->job[jobQ->front].duration;
+	  id = jobQ->job[jobQ->front].id;
+
 	  //Increment front of circular queue.
 	  jobQ->front = (jobQ->front + 1) % jobQ->size; 
 
+	  printf("Consumer(%d) time  %li: Job id %d", 
+		 consID,(time(NULL) - start_time), id);
+	  printf(" executing sleep duration %d \n", duration);
+
 	  sem_signal(semid, 0); //Up on Mutex
 
-	  printf("Consumer(%d) time  %li: Job id %d", 
-		 consID,(time(NULL) - start_time), jobQ->job[jobQ->front].id);
-	  printf(" executing sleep duration %d \n", 
-		 jobQ->job[jobQ->front].duration);
-
 	  //Consume job.
-	  sleep(jobQ->job[jobQ->front].duration);
+	  sleep(duration);
 
 	  printf("Consumer(%d) time  %li: Job id %d", 
-		 consID,(time(NULL) - start_time), jobQ->job[jobQ->front].id);
+		 consID,(time(NULL) - start_time), id);
 	  printf(" completed. \n");
 
 	  sem_signal(semid, 2); //Up on empty count.
