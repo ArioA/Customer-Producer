@@ -55,10 +55,10 @@ int main (int argc, char *argv[])
 	  sleep(rand()%3 + 2); //Preparing next job takes 2-4 seconds.
 	}
 
+      sem_wait(semid, 2);//Down on empty count.
+
       if(k == 0 && jobQ->end == 0) //If first producer.
 	printf("\n");
-
-      sem_wait(semid, 2);//Down on empty count.
 
       sem_wait(semid, 0); //Down on mutex.
 
@@ -82,10 +82,19 @@ int main (int argc, char *argv[])
     printf("Producer(%d) time  %li: No more jobs to generate \n", prodID,
         (time(NULL) - start_time));
 
-    sleep(50);
+    sleep(100);
 
-  shmdt((void*) jobQ);
-  shmctl(shmid, IPC_RMID, NULL);
-
+    shmdt((void*) jobQ);
+    shmctl(shmid, IPC_RMID, NULL);
+    
+    if(sem_attach(sem_key) != -1)//if semaphores still exist.
+      {
+	if(sem_close(semid) == -1) //Get rid of semaphores.
+	  {
+	    perror("Error closing semaphores in producer.cc.\n");
+	    return 1;
+	  }
+      }
+    
   return 0;
 }

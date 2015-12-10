@@ -1,33 +1,33 @@
 // Consumer
-#include <time.h>
+#include <time.h> //Used for counting seconds.
 # include "helper.h"
 
 int main (int argc, char *argv[])
 {
-  if(argc != 2)
+  if(argc != 2) //If incorrect number of command line arguments.
     {
-      printf("Producer cannot have %d arguments in command line.\n", argc);
-      printf("Must have 1 arguments.\n");
+      perror("Error: must have 1 argument in command line.\n");
+      return 2;
     }
 
-  int consID = check_arg(argv[1]);
-  int key = SHM_KEY;
+  int consID = check_arg(argv[1]); //Consumer's ID.
+  int key = SHM_KEY; //Get the shared memory key.
 
+  //Create shared memory, and get it's ID. 
   int shmid(shmget(key, SHM_SIZE, 0644 | IPC_CREAT));
-  bool last_consumer = false;
 
-  if(shmid == -1)
+  if(shmid == -1) //If error with creating shared memory.
     {
-      perror("Error with shmid in Consumer. \n");
+      perror("Error with shmid in consumer.cc. \n");
       return 1;
     }
   
-  QUEUE* jobQ;
+  QUEUE* jobQ; //Pointer to shared memory.
   jobQ = static_cast<QUEUE*>(shmat(shmid, NULL, 0));
 
-  if(shmat(shmid, NULL, 0) == (void*) (-1))
+  if(shmat(shmid, NULL, 0) == (void*) (-1)) //If error attaching shared memory.
     {
-      perror("Error with shmat in Consumer.\n");
+      perror("Error with shmat in consumer.cc.\n");
       shmdt((void*) jobQ);
       shmctl(shmid, IPC_RMID, NULL);
       return 2;
@@ -38,58 +38,73 @@ int main (int argc, char *argv[])
   
   semid = sem_attach(sem_key); //Attach the three semaphores.
 
+  if(semid == -1)
+    {
+      perror("Error attatching semaphores in consumer.cc. \n");
+      return 1;
+    }
+
   long start_time = time(NULL); //Mark the start time of jobs processing.
 
-  int the_front(0);
+  sem_wait(semid, 0); //Down on Mutex
+
+  jobQ->activeConsumers++; //New consumer.
+
+  sem_signal(semid, 0); //Up on Mutex
   
+  //int timewait; //Catches if 
+
   while(true)
     {
-      int timewait = sem_timewait(semid, 1, 10);
+      //timewait = sem_timewait(semid, 1, 10); //Sem down for 10 seconds.
 
-      if(timewait == -1)
+      if(sem_timewait(semid, 1, 10) == -1) //If sem downed for 10 seconds...
 	{
 	  printf("Consumer(%d) time  %li: No jobs left. \n", consID,
 		 (time(NULL) - start_time));
 	  
-	  if(last_consumer)
-	    {
-	      if(sem_close(semid) == -1) //Get rid of semaphores.
-		perror("Error closing semaphores in consumer.\n");
-	      
-	      shmdt((void*) jobQ);
-	      shmctl(shmid, IPC_RMID, NULL);
-	    }
+	  sem_wait(semid, 0); //Down on Mutex
 
-	  sleep(10);
+	  jobQ->activeConsumers--; //Lost a consumer.
+
+	  sem_signal(semid, 0); //Up on Mutex
+	 
+	  if(jobQ->activeConsumers == 0) //If last consumer.
+	    {
+
+	      shmdt((void*) jobQ); //Detach shared memory pointer.
+	      shmctl(shmid, IPC_RMID, NULL); //Delete shared memory.
+	      
+	      if(sem_close(semid) == -1) //Get rid of semaphores.
+		{
+		  perror("Error closing semaphores in consumer.cc.\n");
+		  return 1;
+		}
+	    }
+	  else //If not last consumer...
+	    sleep(300); //...wait for last consumer to clean up.
 
 	  return 0;
 	}
-      else
+      else //If found a new job to consume.
 	{
-	  last_consumer = false;
-
 	  sem_wait(semid, 0); //Down on Mutex
 
-	  the_front = jobQ->front;
-
-	  jobQ->front = (jobQ->front + 1) % jobQ->size;
-
-	  if(jobQ->front == jobQ->end)
-	    {
-	      last_consumer = true;
-	    }
+	  //Increment front of circular queue.
+	  jobQ->front = (jobQ->front + 1) % jobQ->size; 
 
 	  sem_signal(semid, 0); //Up on Mutex
 
 	  printf("Consumer(%d) time  %li: Job id %d", 
-		 consID,(time(NULL) - start_time), jobQ->job[the_front].id);
+		 consID,(time(NULL) - start_time), jobQ->job[jobQ->front].id);
 	  printf(" executing sleep duration %d \n", 
-		 jobQ->job[the_front].duration);
+		 jobQ->job[jobQ->front].duration);
 
-	  sleep(jobQ->job[the_front].duration);
+	  //Consume job.
+	  sleep(jobQ->job[jobQ->front].duration);
 
 	  printf("Consumer(%d) time  %li: Job id %d", 
-		 consID,(time(NULL) - start_time), jobQ->job[the_front].id);
+		 consID,(time(NULL) - start_time), jobQ->job[jobQ->front].id);
 	  printf(" completed. \n");
 
 	  sem_signal(semid, 2); //Up on empty count.

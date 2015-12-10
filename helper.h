@@ -21,7 +21,7 @@
 # define SHM_W 0200
 # define SHM_R 0400
 # define SHM_MODE (SHM_R | SHM_W)
-# define SHM_SIZE 4012 // Change this number as needed
+# define SHM_SIZE 4016 //QUEUE = int+int+int+ 500*(int+int)+int = 4016 bytes.
 # define SEM_KEY 0x014916 // Change this number as needed
 # define MAX_QUEUE_SIZE 500
 
@@ -42,7 +42,8 @@ typedef struct queue
   int size; 
   int front;
   int end;
-  JOBTYPE job[500]; // Can assume this to be maximum queue size
+  int activeConsumers;
+  JOBTYPE job[MAX_QUEUE_SIZE]; // Can assume this to be maximum queue size
 } QUEUE;
 
 int check_arg (char *);
