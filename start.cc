@@ -35,8 +35,19 @@ int main (int argc, char **argv)
   QUEUE* jobQ;
   jobQ = static_cast<QUEUE*>(shmat(shmid, NULL, 0));
 
+  if(check_arg(argv[1]) > MAX_QUEUE_SIZE)
+    {
+      perror("Can't have a queue of that size.\n");
+      return 1;
+    }
+  else if(check_arg(argv[1]) == -1)
+    {
+      perror("Invalid command line argument for queue size in start.cc\n");
+      return 1;
+    }
+
   //Default settings.
-  jobQ->size = check_arg(argv[1]);
+  jobQ->size = check_arg(argv[1]);  
   jobQ->front = 0;
   jobQ->end = 0;
   jobQ->activeConsumers = 0;

@@ -1,4 +1,10 @@
-// Consumer
+// Author: Ario Aliabadi
+// Last Edited: 11/12/2015
+// CID: 01110168
+
+//This program models the behaviour of a job consumer in a consumer-producer
+//scenario, using semaphores.
+
 #include <time.h> //Used for counting seconds.
 # include "helper.h"
 
@@ -8,6 +14,12 @@ int main (int argc, char *argv[])
     {
       perror("Error: must have 1 argument in command line.\n");
       return 2;
+    }
+
+  if(check_arg(argv[1]) == -1)
+    {
+      perror("Invalid command line argument for consumer ID in consumer.cc\n");
+      return 1;
     }
 
   int consID = check_arg(argv[1]); //Consumer's ID.
@@ -38,26 +50,27 @@ int main (int argc, char *argv[])
   
   semid = sem_attach(sem_key); //Attach the three semaphores.
 
-  if(semid == -1)
+  if(semid == -1) //If failed to attach semaphore.
     {
       perror("Error attatching semaphores in consumer.cc. \n");
       return 1;
     }
-
-  long start_time = time(NULL); //Mark the start time of jobs processing.
-  int id;
-  int duration;
+  //Mark the start time of jobs processing.
+  long start_time = time(NULL) +1;  //+1 to synchronise with producer time.
+  int id; //Buffer to save the job ID about to be consumed.
+  int duration; //Buffer to save the job duration about to be consumed.
 
   sem_wait(semid, 0); //Down on Mutex
+
+  if(jobQ->activeConsumers == 0 && jobQ->front == 0 && jobQ->end == 0)
+    {
+      printf("\n"); //Newline from first consumer (purely aesthetic).
+    }
 
   jobQ->activeConsumers++; //New consumer.
 
   sem_signal(semid, 0); //Up on Mutex
   
-  if(jobQ->activeConsumers == 0)
-    {
-      printf("\n");
-    }
 
   while(true)
     {
@@ -116,6 +129,7 @@ int main (int argc, char *argv[])
 	}
     }
 
+  //Clean up shared memory in case something goes wrong.
   shmdt((void*) jobQ);
   shmctl(shmid, IPC_RMID, NULL);
 
